@@ -1,4 +1,5 @@
 using FriendshipAssistant.Config;
+using FriendshipAssistant.Helpers;
 using FriendshipAssistant.Models;
 using FriendshipAssistant.UI;
 using StardewValley;
@@ -13,6 +14,7 @@ public sealed class GiftPromptController
     private readonly StardewGiftCandidateFactory candidateFactory;
     private readonly NpcGiftEligibility eligibility;
     private readonly GiftGiver giftGiver;
+    private readonly GiftHistoryService giftHistory;
     private readonly Func<string, string> translate;
     private readonly Action<string> notify;
 
@@ -23,6 +25,7 @@ public sealed class GiftPromptController
         StardewGiftCandidateFactory candidateFactory,
         NpcGiftEligibility eligibility,
         GiftGiver giftGiver,
+        GiftHistoryService giftHistory,
         Func<string, string> translate,
         Action<string> notify)
     {
@@ -32,6 +35,7 @@ public sealed class GiftPromptController
         this.candidateFactory = candidateFactory;
         this.eligibility = eligibility;
         this.giftGiver = giftGiver;
+        this.giftHistory = giftHistory;
         this.translate = translate;
         this.notify = notify;
     }
@@ -60,10 +64,16 @@ public sealed class GiftPromptController
             return;
         }
 
-        IReadOnlyList<GiftCandidate> candidates = result.All().ToList();
+        string? lastGiftItemId = this.giftHistory.GetLastGift(npc.Name)?.ItemId;
+        GiftMenuModel model = GiftMenuModel.FromAnalysis(
+            result,
+            lastGiftItemId,
+            this.GetCategoryLabel,
+            this.translate("ui.lastGifted"));
+
         Game1.activeClickableMenu = new GiftSuggestionMenu(
             npc,
-            candidates,
+            model,
             selected =>
             {
                 StardewValley.Object? item = FindObjectById(farmer, selected.ItemId);
@@ -71,7 +81,29 @@ public sealed class GiftPromptController
                     this.giftGiver.GiveGift(npc, item, farmer, Game1.currentSeason, Game1.dayOfMonth);
             },
             this.translate("ui.title"),
-            this.translate("ui.close"));
+            this.translate("ui.close"),
+            this.GetBannerText(npc));
+    }
+
+    private string GetCategoryLabel(GiftTaste taste)
+    {
+        return taste switch
+        {
+            GiftTaste.Loved => this.translate("category.loved"),
+            GiftTaste.Liked => this.translate("category.liked"),
+            GiftTaste.Neutral => this.translate("category.neutral"),
+            GiftTaste.Disliked => this.translate("category.disliked"),
+            GiftTaste.Hated => this.translate("category.hated"),
+            _ => taste.ToString()
+        };
+    }
+
+    private string? GetBannerText(NPC npc)
+    {
+        if (BirthdayHelper.IsBirthday(Game1.currentSeason, Game1.dayOfMonth, npc.Birthday_Season, npc.Birthday_Day))
+            return this.translate("birthday.banner").Replace("{{npcName}}", npc.displayName, StringComparison.Ordinal);
+
+        return null;
     }
 
     private static StardewValley.Object? FindObjectById(Farmer farmer, string itemId)

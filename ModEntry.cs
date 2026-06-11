@@ -28,6 +28,7 @@ public sealed class ModEntry : Mod
             new StardewGiftCandidateFactory(),
             new NpcGiftEligibility(),
             new GiftGiver(this.giftHistory),
+            this.giftHistory,
             key => this.Helper.Translation.Get(key),
             message => Game1.addHUDMessage(new HUDMessage(message)));
 
