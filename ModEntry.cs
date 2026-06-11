@@ -15,6 +15,7 @@ public sealed class ModEntry : Mod
     private readonly DialogueContextTracker dialogueTracker = new();
     private readonly GiftHistoryService giftHistory = new();
     private GiftPromptController? promptController;
+    private string? pendingSpeakerName;
     private ModConfig config = new();
 
     public override void Entry(IModHelper helper)
@@ -36,6 +37,7 @@ public sealed class ModEntry : Mod
         helper.Events.GameLoop.SaveLoaded += this.OnSaveLoaded;
         helper.Events.GameLoop.Saving += this.OnSaving;
         helper.Events.GameLoop.ReturnedToTitle += this.OnReturnedToTitle;
+        helper.Events.GameLoop.UpdateTicked += this.OnUpdateTicked;
         helper.Events.Display.MenuChanged += this.OnMenuChanged;
 
         Monitor.Log("FriendshipAssistant loaded.", LogLevel.Info);
@@ -75,7 +77,27 @@ public sealed class ModEntry : Mod
     private void OnReturnedToTitle(object? sender, ReturnedToTitleEventArgs e)
     {
         this.dialogueTracker.Clear();
+        this.pendingSpeakerName = null;
         this.giftHistory.Import(null);
+    }
+
+    private void OnUpdateTicked(object? sender, UpdateTickedEventArgs e)
+    {
+        if (this.pendingSpeakerName is null || Game1.activeClickableMenu is not null || Game1.player is null)
+            return;
+
+        string speakerName = this.pendingSpeakerName;
+        this.pendingSpeakerName = null;
+
+        NPC? npc = Game1.getCharacterFromName(speakerName);
+        if (npc is null)
+        {
+            this.Monitor.Log($"Gift prompt skipped: NPC '{speakerName}' was not found.", LogLevel.Trace);
+            return;
+        }
+
+        GiftPromptResult result = this.promptController?.TryPrompt(npc, Game1.player) ?? GiftPromptResult.NotEligible;
+        this.Monitor.Log($"Gift prompt result for {npc.Name}: {result}.", LogLevel.Trace);
     }
 
     private void OnMenuChanged(object? sender, MenuChangedEventArgs e)
@@ -84,20 +106,22 @@ public sealed class ModEntry : Mod
         {
             string? speakerName = TryGetDialogueSpeakerName(e.NewMenu);
             if (!string.IsNullOrWhiteSpace(speakerName))
+            {
                 this.dialogueTracker.DialogueOpened(speakerName);
+                this.Monitor.Log($"Dialogue opened with {speakerName}.", LogLevel.Trace);
+            }
             return;
         }
 
-        if (e.OldMenu?.GetType().Name == "DialogueBox" && e.NewMenu is null)
+        if (e.OldMenu?.GetType().Name == "DialogueBox")
         {
             string? speakerName = this.dialogueTracker.DialogueClosed();
             if (speakerName is null)
                 return;
 
             this.dialogueTracker.MarkTriggered();
-            NPC? npc = Game1.getCharacterFromName(speakerName);
-            if (npc is not null && Game1.player is not null)
-                this.promptController?.TryPrompt(npc, Game1.player);
+            this.pendingSpeakerName = speakerName;
+            this.Monitor.Log($"Dialogue closed with {speakerName}; prompt queued.", LogLevel.Trace);
         }
     }
 

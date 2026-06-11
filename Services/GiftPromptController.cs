@@ -40,28 +40,28 @@ public sealed class GiftPromptController
         this.notify = notify;
     }
 
-    public void TryPrompt(NPC npc, Farmer farmer)
+    public GiftPromptResult TryPrompt(NPC npc, Farmer farmer)
     {
         if (!this.eligibility.CanOfferGiftPrompt(npc, farmer))
-            return;
+            return GiftPromptResult.NotEligible;
 
         GiftAnalysisResult result = this.detector.Analyze(this.candidateFactory.CreateFromInventory(farmer.Items, npc));
         if (!result.HasAnyGift)
-            return;
+            return GiftPromptResult.NoGifts;
 
         if (this.config.AutoGift)
         {
             GiftCandidate? selected = this.selectionService.SelectAutoGift(result);
             if (selected is null)
-                return;
+                return GiftPromptResult.NoAutoGiftCandidate;
 
             StardewValley.Object? item = FindObjectById(farmer, selected.ItemId);
             if (item is null)
-                return;
+                return GiftPromptResult.ItemNotFound;
 
             this.giftGiver.GiveGift(npc, item, farmer, Game1.currentSeason, Game1.dayOfMonth);
             this.notify($"{selected.DisplayName} -> {npc.displayName}");
-            return;
+            return GiftPromptResult.AutoGifted;
         }
 
         string? lastGiftItemId = this.giftHistory.GetLastGift(npc.Name)?.ItemId;
@@ -83,6 +83,8 @@ public sealed class GiftPromptController
             this.translate("ui.title"),
             this.translate("ui.close"),
             this.GetBannerText(npc));
+
+        return GiftPromptResult.OpenedMenu;
     }
 
     private string GetCategoryLabel(GiftTaste taste)
