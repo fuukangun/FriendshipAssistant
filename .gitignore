@@ -20,3 +20,4 @@ worktrees/
 packages/
 artifacts/
 publish/
+.DS_Store
