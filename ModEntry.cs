@@ -16,6 +16,7 @@ public sealed class ModEntry : Mod
     private readonly GiftHistoryService giftHistory = new();
     private GiftPromptController? promptController;
     private string? pendingSpeakerName;
+    private bool wasDialogueBoxOpen;
     private ModConfig config = new();
 
     public override void Entry(IModHelper helper)
@@ -84,20 +85,24 @@ public sealed class ModEntry : Mod
     private void OnUpdateTicked(object? sender, UpdateTickedEventArgs e)
     {
         if (this.pendingSpeakerName is null || Game1.activeClickableMenu is not null || Game1.player is null)
+        {
+            this.TrackDialogueMenu();
             return;
+        }
 
         string speakerName = this.pendingSpeakerName;
         this.pendingSpeakerName = null;
+        this.TrackDialogueMenu();
 
         NPC? npc = Game1.getCharacterFromName(speakerName);
         if (npc is null)
         {
-            this.Monitor.Log($"Gift prompt skipped: NPC '{speakerName}' was not found.", LogLevel.Trace);
+            this.Monitor.Log($"Gift prompt skipped: NPC '{speakerName}' was not found.", LogLevel.Info);
             return;
         }
 
         GiftPromptResult result = this.promptController?.TryPrompt(npc, Game1.player) ?? GiftPromptResult.NotEligible;
-        this.Monitor.Log($"Gift prompt result for {npc.Name}: {result}.", LogLevel.Trace);
+        this.Monitor.Log($"Gift prompt result for {npc.Name}: {result}.", LogLevel.Info);
     }
 
     private void OnMenuChanged(object? sender, MenuChangedEventArgs e)
@@ -108,7 +113,7 @@ public sealed class ModEntry : Mod
             if (!string.IsNullOrWhiteSpace(speakerName))
             {
                 this.dialogueTracker.DialogueOpened(speakerName);
-                this.Monitor.Log($"Dialogue opened with {speakerName}.", LogLevel.Trace);
+                this.Monitor.Log($"Dialogue opened with {speakerName}.", LogLevel.Info);
             }
             return;
         }
@@ -121,8 +126,38 @@ public sealed class ModEntry : Mod
 
             this.dialogueTracker.MarkTriggered();
             this.pendingSpeakerName = speakerName;
-            this.Monitor.Log($"Dialogue closed with {speakerName}; prompt queued.", LogLevel.Trace);
+            this.Monitor.Log($"Dialogue closed with {speakerName}; prompt queued.", LogLevel.Info);
         }
+    }
+
+    private void TrackDialogueMenu()
+    {
+        bool isDialogueBoxOpen = Game1.activeClickableMenu?.GetType().Name == "DialogueBox";
+        if (isDialogueBoxOpen)
+        {
+            IClickableMenu? activeMenu = Game1.activeClickableMenu;
+            string? speakerName = activeMenu is null ? null : TryGetDialogueSpeakerName(activeMenu);
+            if (!string.IsNullOrWhiteSpace(speakerName) && this.dialogueTracker.CurrentSpeakerName != speakerName)
+            {
+                this.dialogueTracker.DialogueOpened(speakerName);
+                this.Monitor.Log($"Dialogue tracked with {speakerName}.", LogLevel.Info);
+            }
+
+            this.wasDialogueBoxOpen = true;
+            return;
+        }
+
+        if (!this.wasDialogueBoxOpen)
+            return;
+
+        this.wasDialogueBoxOpen = false;
+        string? closedSpeakerName = this.dialogueTracker.DialogueClosed();
+        if (closedSpeakerName is null)
+            return;
+
+        this.dialogueTracker.MarkTriggered();
+        this.pendingSpeakerName = closedSpeakerName;
+        this.Monitor.Log($"Dialogue tracked closed with {closedSpeakerName}; prompt queued.", LogLevel.Info);
     }
 
     private static string? TryGetDialogueSpeakerName(IClickableMenu menu)
@@ -134,6 +169,13 @@ public sealed class ModEntry : Mod
             .GetField("speaker", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic)
             ?.GetValue(dialogueBox);
 
-        return speaker is NPC npc ? npc.Name : null;
+        if (speaker is NPC npc)
+            return npc.Name;
+
+        object? currentSpeaker = typeof(Game1)
+            .GetField("currentSpeaker", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic)
+            ?.GetValue(null);
+
+        return currentSpeaker is NPC fallbackNpc ? fallbackNpc.Name : null;
     }
 }
