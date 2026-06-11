@@ -74,6 +74,7 @@ public sealed class GiftPromptController
         Game1.activeClickableMenu = new GiftSuggestionMenu(
             npc,
             model,
+            farmer.Items,
             selected =>
             {
                 StardewValley.Object? item = FindObjectById(farmer, selected.ItemId);

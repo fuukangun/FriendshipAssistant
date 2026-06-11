@@ -10,11 +10,15 @@ public sealed class GiftSuggestionMenu : IClickableMenu
 {
     private const int MenuWidth = 720;
     private const int MenuHeight = 520;
-    private const int RowHeight = 72;
-    private const int VisibleRows = 5;
+    private const int SlotSize = 64;
+    private const int SlotSpacing = 14;
+    private const int Columns = 7;
+    private const int VisibleGridRows = 3;
 
     private readonly NPC npc;
     private readonly GiftMenuModel model;
+    private readonly GiftGridLayout gridLayout = new(Columns, SlotSize, SlotSpacing);
+    private readonly IReadOnlyDictionary<string, Item> inventoryItemsById;
     private readonly Action<GiftCandidate> onGiftSelected;
     private readonly string title;
     private readonly string closeText;
@@ -24,6 +28,7 @@ public sealed class GiftSuggestionMenu : IClickableMenu
     public GiftSuggestionMenu(
         NPC npc,
         GiftMenuModel model,
+        IEnumerable<Item?> inventoryItems,
         Action<GiftCandidate> onGiftSelected,
         string title,
         string closeText,
@@ -37,6 +42,11 @@ public sealed class GiftSuggestionMenu : IClickableMenu
     {
         this.npc = npc;
         this.model = model;
+        this.inventoryItemsById = inventoryItems
+            .OfType<Item>()
+            .Where(item => item.Stack > 0)
+            .GroupBy(item => item.ItemId)
+            .ToDictionary(group => group.Key, group => group.First());
         this.onGiftSelected = onGiftSelected;
         this.title = title;
         this.closeText = closeText;
@@ -47,18 +57,10 @@ public sealed class GiftSuggestionMenu : IClickableMenu
     {
         base.receiveLeftClick(x, y, playSound);
 
-        IReadOnlyList<GiftMenuRow> visibleRows = this.model.GetVisibleRows(this.scrollOffset, VisibleRows);
-        for (int index = 0; index < visibleRows.Count; index++)
+        GiftCandidate? clicked = this.gridLayout.HitTest(this.GetVisibleSlots(), x, y);
+        if (clicked is not null)
         {
-            Rectangle row = this.GetRowBounds(index);
-            if (!row.Contains(x, y))
-                continue;
-
-            GiftMenuRow menuRow = visibleRows[index];
-            if (menuRow.Candidate is null)
-                return;
-
-            this.onGiftSelected(menuRow.Candidate);
+            this.onGiftSelected(clicked);
             this.exitThisMenu();
             return;
         }
@@ -73,11 +75,13 @@ public sealed class GiftSuggestionMenu : IClickableMenu
         base.receiveScrollWheelAction(direction);
 
         if (direction < 0)
-            this.scrollOffset++;
+            this.scrollOffset += Columns;
         else if (direction > 0)
-            this.scrollOffset--;
+            this.scrollOffset -= Columns;
 
-        this.scrollOffset = Math.Clamp(this.scrollOffset, 0, Math.Max(0, this.model.Rows.Count - VisibleRows));
+        int itemCount = this.model.Rows.Count(row => row.Candidate is not null);
+        int visibleCount = Columns * VisibleGridRows;
+        this.scrollOffset = Math.Clamp(this.scrollOffset, 0, Math.Max(0, itemCount - visibleCount));
     }
 
     public override void draw(SpriteBatch b)
@@ -103,24 +107,11 @@ public sealed class GiftSuggestionMenu : IClickableMenu
                 Color.DarkGoldenrod);
         }
 
-        IReadOnlyList<GiftMenuRow> visibleRows = this.model.GetVisibleRows(this.scrollOffset, VisibleRows);
-        for (int index = 0; index < visibleRows.Count; index++)
-        {
-            GiftMenuRow rowData = visibleRows[index];
-            Rectangle row = this.GetRowBounds(index);
-            Color rowColor = rowData.IsHeader ? Color.SaddleBrown * 0.3f : Color.Wheat * 0.25f;
-            b.Draw(Game1.staminaRect, row, rowColor);
+        this.DrawCategorySummary(b);
 
-            string text = rowData.Candidate is null
-                ? rowData.Text
-                : $"{rowData.Text}  ({rowData.Candidate.Taste}, Q{rowData.Candidate.Quality})";
-            Color textColor = rowData.IsLastGift ? Color.Gray : Game1.textColor;
-            Utility.drawTextWithShadow(
-                b,
-                text,
-                Game1.smallFont,
-                new Vector2(row.X + 20, row.Y + 18),
-                textColor);
+        foreach (GiftMenuSlot slot in this.GetVisibleSlots())
+        {
+            this.DrawSlot(b, slot);
         }
 
         Rectangle closeBounds = new(this.xPositionOnScreen + this.width / 2 - 80, this.yPositionOnScreen + this.height - 76, 160, 52);
@@ -133,14 +124,75 @@ public sealed class GiftSuggestionMenu : IClickableMenu
             Game1.textColor);
 
         this.drawMouse(b);
+        this.DrawHoverTooltip(b);
     }
 
-    private Rectangle GetRowBounds(int index)
+    private IReadOnlyList<GiftMenuSlot> GetVisibleSlots()
     {
-        return new Rectangle(
-            this.xPositionOnScreen + 48,
-            this.yPositionOnScreen + 118 + index * RowHeight,
-            this.width - 96,
-            RowHeight - 8);
+        IReadOnlyList<GiftMenuRow> itemRows = this.model.Rows
+            .Where(row => row.Candidate is not null)
+            .Skip(this.scrollOffset)
+            .Take(Columns * VisibleGridRows)
+            .ToList();
+
+        return this.gridLayout.BuildSlots(
+            itemRows,
+            originX: this.xPositionOnScreen + 64,
+            originY: this.yPositionOnScreen + 160);
+    }
+
+    private void DrawCategorySummary(SpriteBatch b)
+    {
+        IReadOnlyList<string> labels = this.model.Rows
+            .Where(row => row.IsHeader)
+            .Select(row => row.Text)
+            .ToList();
+        if (labels.Count == 0)
+            return;
+
+        Utility.drawTextWithShadow(
+            b,
+            string.Join(" / ", labels),
+            Game1.smallFont,
+            new Vector2(this.xPositionOnScreen + 64, this.yPositionOnScreen + 126),
+            Game1.textColor);
+    }
+
+    private void DrawSlot(SpriteBatch b, GiftMenuSlot slot)
+    {
+        Rectangle bounds = new(slot.X, slot.Y, slot.Size, slot.Size);
+        Color background = bounds.Contains(Game1.getMouseX(), Game1.getMouseY())
+            ? Color.Wheat * 0.65f
+            : Color.Wheat * 0.35f;
+
+        b.Draw(Game1.staminaRect, bounds, background);
+        IClickableMenu.drawTextureBox(
+            b,
+            Game1.menuTexture,
+            new Rectangle(0, 256, 60, 60),
+            bounds.X,
+            bounds.Y,
+            bounds.Width,
+            bounds.Height,
+            Color.White);
+
+        if (this.inventoryItemsById.TryGetValue(slot.Candidate.ItemId, out Item? item))
+            item.drawInMenu(b, new Vector2(bounds.X + 8, bounds.Y + 8), 1f);
+
+        if (slot.IsLastGift)
+            Utility.drawTextWithShadow(b, "*", Game1.smallFont, new Vector2(bounds.Right - 18, bounds.Y + 2), Color.Gold);
+    }
+
+    private void DrawHoverTooltip(SpriteBatch b)
+    {
+        GiftMenuSlot? hovered = this.GetVisibleSlots()
+            .FirstOrDefault(slot => new Rectangle(slot.X, slot.Y, slot.Size, slot.Size).Contains(Game1.getMouseX(), Game1.getMouseY()));
+        if (hovered is null)
+            return;
+
+        string text = hovered.IsLastGift
+            ? $"{hovered.Candidate.DisplayName}\n{hovered.Candidate.Taste}\n{this.model.Rows.First(row => row.Candidate == hovered.Candidate).Text}"
+            : $"{hovered.Candidate.DisplayName}\n{hovered.Candidate.Taste}";
+        IClickableMenu.drawHoverText(b, text, Game1.smallFont);
     }
 }
