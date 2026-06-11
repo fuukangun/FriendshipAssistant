@@ -32,15 +32,15 @@ public sealed class StardewGiftCandidateFactory
         }
     }
 
-    private static GiftTaste MapTaste(int rawTaste)
+    public static GiftTaste MapTaste(int rawTaste)
     {
         return rawTaste switch
         {
             0 => GiftTaste.Loved,
             2 => GiftTaste.Liked,
-            4 => GiftTaste.Neutral,
-            6 => GiftTaste.Disliked,
-            8 => GiftTaste.Hated,
+            8 => GiftTaste.Neutral,
+            4 => GiftTaste.Disliked,
+            6 => GiftTaste.Hated,
             _ => GiftTaste.Neutral
         };
     }
