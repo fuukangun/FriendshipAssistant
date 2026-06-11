@@ -1,0 +1,10 @@
+{
+  "Name": "FriendshipAssistant",
+  "Author": "fuukangun",
+  "Version": "1.0.0",
+  "Description": "Gift suggestion assistant for Stardew Valley.",
+  "UniqueID": "fuukangun.FriendshipAssistant",
+  "EntryDll": "FriendshipAssistant.dll",
+  "MinimumApiVersion": "4.0.0",
+  "UpdateKeys": []
+}

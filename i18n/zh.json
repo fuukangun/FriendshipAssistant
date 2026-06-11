@@ -1,0 +1,19 @@
+{
+  "ui.title": "送礼建议",
+  "ui.close": "关闭",
+  "ui.lastGifted": "上次送过",
+  "category.loved": "最爱",
+  "category.liked": "喜欢",
+  "category.neutral": "普通",
+  "category.disliked": "不喜欢",
+  "category.hated": "讨厌",
+  "birthday.banner": "今天是 {{npcName}} 的生日！送礼友谊加成 x8！",
+  "festival.banner": "今天是节日！别忘了送礼！",
+  "auto.message": "[友谊助手] 已自动赠送 {{itemName}} 给 {{npcName}}。",
+  "quality.iridium": "铱星",
+  "quality.gold": "金星",
+  "quality.silver": "银星",
+  "quality.normal": "普通",
+  "gmcm.autoGift.name": "自动交好",
+  "gmcm.autoGift.tooltip": "开启后，对话结束自动送出最优物品，不弹窗。"
+}

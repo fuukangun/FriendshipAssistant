@@ -1,0 +1,19 @@
+{
+  "ui.title": "Gift Suggestion",
+  "ui.close": "Close",
+  "ui.lastGifted": "Last gifted",
+  "category.loved": "Loved",
+  "category.liked": "Liked",
+  "category.neutral": "Neutral",
+  "category.disliked": "Disliked",
+  "category.hated": "Hated",
+  "birthday.banner": "Today is {{npcName}}'s birthday! Gift friendship x8!",
+  "festival.banner": "It's a festival today! Don't forget to gift!",
+  "auto.message": "[FriendshipAssistant] Automatically gifted {{itemName}} to {{npcName}}.",
+  "quality.iridium": "Iridium",
+  "quality.gold": "Gold",
+  "quality.silver": "Silver",
+  "quality.normal": "Normal",
+  "gmcm.autoGift.name": "Auto Gift",
+  "gmcm.autoGift.tooltip": "When enabled, automatically gifts the best item after dialogue without showing the menu."
+}
