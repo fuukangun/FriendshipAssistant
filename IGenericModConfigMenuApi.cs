@@ -1,11 +1,14 @@
+using StardewModdingAPI;
+using StardewModdingAPI.Utilities;
+
 namespace FriendshipAssistant;
 
 public interface IGenericModConfigMenuApi
 {
-    void Register(object mod, Action reset, Action save, bool titleScreenOnly = false);
+    void Register(IManifest mod, Action reset, Action save, bool titleScreenOnly = false);
 
     void AddBoolOption(
-        object mod,
+        IManifest mod,
         Func<bool> getValue,
         Action<bool> setValue,
         Func<string> name,

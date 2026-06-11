@@ -1,0 +1,9 @@
+<Project>
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'FriendshipAssistant'">
+    <BaseIntermediateOutputPath>obj/FriendshipAssistant/</BaseIntermediateOutputPath>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'FriendshipAssistant.Tests'">
+    <BaseIntermediateOutputPath>obj/FriendshipAssistant.Tests/</BaseIntermediateOutputPath>
+  </PropertyGroup>
+</Project>
