@@ -9,7 +9,7 @@ public sealed class StardewGiftCandidateFactory
     {
         ArgumentNullException.ThrowIfNull(npc);
 
-        if (item is null || item.Stack <= 0)
+        if (item is null || item.Stack <= 0 || !CanAppearInGiftPrompt(item))
             return null;
 
         GiftTaste taste = MapTaste(npc.getGiftTasteForThisItem(item));
@@ -30,6 +30,23 @@ public sealed class StardewGiftCandidateFactory
             if (candidate is not null)
                 yield return candidate;
         }
+    }
+
+    public static bool CanAppearInGiftPrompt(Item? item)
+    {
+        if (item is null || item.Stack <= 0)
+            return false;
+
+        if (IsBlockedGiftPromptItemTypeName(item.GetType().FullName ?? string.Empty))
+            return false;
+
+        return item.canBeGivenAsGift();
+    }
+
+    public static bool IsBlockedGiftPromptItemTypeName(string typeName)
+    {
+        return typeName.StartsWith("StardewValley.Tools.", StringComparison.Ordinal)
+            || typeName == "StardewValley.Tool";
     }
 
     public static GiftTaste MapTaste(int rawTaste)

@@ -32,7 +32,12 @@ public sealed class ModEntry : Mod
             new GiftGiver(this.giftHistory),
             this.giftHistory,
             key => this.Helper.Translation.Get(key),
-            message => Game1.addHUDMessage(new HUDMessage(message)));
+            (item, message) =>
+            {
+                HUDMessage hudMessage = HUDMessage.ForItemGained(item, 1, item.Name);
+                hudMessage.message = message;
+                Game1.addHUDMessage(hudMessage);
+            });
 
         helper.Events.GameLoop.GameLaunched += this.OnGameLaunched;
         helper.Events.GameLoop.SaveLoaded += this.OnSaveLoaded;

@@ -27,13 +27,33 @@ public sealed class GiftGiver
         int salePrice = item.salePrice();
 
         npc.receiveGift(item, farmer);
+        ConsumeGiftFromInventory(farmer, item);
 
         this.historyService.RecordGift(
             npc.Name,
-            new GiftCandidate(itemId, displayName, GiftTaste.Neutral, quality, Math.Max(item.Stack, 1), salePrice),
+            new GiftCandidate(itemId, displayName, GiftTaste.Neutral, quality, 1, salePrice),
             season,
             day);
 
         return true;
+    }
+
+    private static void ConsumeGiftFromInventory(Farmer farmer, StardewValley.Object item)
+    {
+        GiftInventoryConsumption.ConsumeResult result = GiftInventoryConsumption.ConsumeOne(item.Stack);
+
+        for (int index = 0; index < farmer.Items.Count; index++)
+        {
+            if (!ReferenceEquals(farmer.Items[index], item))
+                continue;
+
+            if (result.RemoveSlot)
+                farmer.Items[index] = null!;
+            else
+                item.Stack = result.NewStack;
+            return;
+        }
+
+        item.Stack = result.NewStack;
     }
 }

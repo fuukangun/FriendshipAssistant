@@ -16,7 +16,7 @@ public sealed class GiftPromptController
     private readonly GiftGiver giftGiver;
     private readonly GiftHistoryService giftHistory;
     private readonly Func<string, string> translate;
-    private readonly Action<string> notify;
+    private readonly Action<Item, string> notify;
 
     public GiftPromptController(
         ModConfig config,
@@ -27,7 +27,7 @@ public sealed class GiftPromptController
         GiftGiver giftGiver,
         GiftHistoryService giftHistory,
         Func<string, string> translate,
-        Action<string> notify)
+        Action<Item, string> notify)
     {
         this.config = config;
         this.detector = detector;
@@ -59,8 +59,9 @@ public sealed class GiftPromptController
             if (item is null)
                 return GiftPromptResult.ItemNotFound;
 
+            Item notificationItem = item.getOne();
             this.giftGiver.GiveGift(npc, item, farmer, Game1.currentSeason, Game1.dayOfMonth);
-            this.notify($"{selected.DisplayName} -> {npc.displayName}");
+            this.notify(notificationItem, $"{selected.DisplayName} -> {npc.displayName}");
             return GiftPromptResult.AutoGifted;
         }
 
