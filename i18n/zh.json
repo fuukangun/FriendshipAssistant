@@ -1,6 +1,10 @@
 {
   "ui.title": "送礼建议",
   "ui.close": "关闭",
+  "ui.dismissToday": "今日不再提醒",
+  "ui.backpack": "背包物品",
+  "ui.storage": "存储设备",
+  "ui.empty": "没有可送出的物品",
   "ui.lastGifted": "上次送过",
   "category.loved": "最爱",
   "category.liked": "喜欢",
@@ -15,5 +19,7 @@
   "quality.silver": "银星",
   "quality.normal": "普通",
   "gmcm.autoGift.name": "自动交好",
-  "gmcm.autoGift.tooltip": "开启后，对话结束自动送出最优物品，不弹窗。"
+  "gmcm.autoGift.tooltip": "开启后，对话结束自动送出最优物品，不弹窗。",
+  "gmcm.showStorageItems.name": "显示存储设备物品",
+  "gmcm.showStorageItems.tooltip": "开启后，送礼建议界面会显示支持的存储设备中的物品。此功能可能影响游戏平衡性。"
 }

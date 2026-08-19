@@ -28,6 +28,53 @@ public sealed class GiftMenuModel
         return new GiftMenuModel(rows);
     }
 
+    public static GiftMenuModel FromItems(
+        IEnumerable<GiftMenuItem> items,
+        string? lastGiftItemId,
+        Func<GiftTaste, string> categoryLabel,
+        string lastGiftText)
+    {
+        ArgumentNullException.ThrowIfNull(items);
+
+        List<GiftMenuRow> rows = new();
+        GiftTaste[] tastes =
+        {
+            GiftTaste.Loved,
+            GiftTaste.Liked,
+            GiftTaste.Neutral,
+            GiftTaste.Disliked,
+            GiftTaste.Hated
+        };
+
+        foreach (GiftTaste taste in tastes)
+        {
+            IReadOnlyList<GiftMenuItem> group = items
+                .Where(item => item.Candidate.Taste == taste)
+                .OrderByDescending(item => item.Candidate.Quality)
+                .ThenBy(item => item.Candidate.SalePrice)
+                .ThenBy(item => item.Candidate.DisplayName, StringComparer.CurrentCulture)
+                .ToList();
+
+            if (group.Count == 0)
+                continue;
+
+            rows.Add(new GiftMenuRow(null, categoryLabel(taste), IsHeader: true, IsLastGift: false));
+            foreach (GiftMenuItem item in group)
+            {
+                bool isLastGift = item.Candidate.ItemId == lastGiftItemId;
+                string text = isLastGift
+                    ? $"{item.Candidate.DisplayName} - {lastGiftText}"
+                    : item.Candidate.DisplayName;
+                rows.Add(new GiftMenuRow(item.Candidate, text, IsHeader: false, isLastGift)
+                {
+                    MenuItem = item
+                });
+            }
+        }
+
+        return new GiftMenuModel(rows);
+    }
+
     public IReadOnlyList<GiftMenuRow> GetVisibleRows(int scrollOffset, int visibleCount)
     {
         if (visibleCount <= 0 || this.Rows.Count == 0)

@@ -5,4 +5,5 @@ public sealed record GiftMenuSlot(
     int X,
     int Y,
     int Size,
-    bool IsLastGift);
+    bool IsLastGift,
+    GiftMenuItem? MenuItem = null);

@@ -12,6 +12,7 @@ public sealed class GiftPromptController
     private readonly GiftDetector detector;
     private readonly GiftSelectionService selectionService;
     private readonly StardewGiftCandidateFactory candidateFactory;
+    private readonly StorageItemService storageItemService;
     private readonly NpcGiftEligibility eligibility;
     private readonly GiftGiver giftGiver;
     private readonly GiftHistoryService giftHistory;
@@ -23,6 +24,7 @@ public sealed class GiftPromptController
         GiftDetector detector,
         GiftSelectionService selectionService,
         StardewGiftCandidateFactory candidateFactory,
+        StorageItemService storageItemService,
         NpcGiftEligibility eligibility,
         GiftGiver giftGiver,
         GiftHistoryService giftHistory,
@@ -33,6 +35,7 @@ public sealed class GiftPromptController
         this.detector = detector;
         this.selectionService = selectionService;
         this.candidateFactory = candidateFactory;
+        this.storageItemService = storageItemService;
         this.eligibility = eligibility;
         this.giftGiver = giftGiver;
         this.giftHistory = giftHistory;
@@ -46,7 +49,7 @@ public sealed class GiftPromptController
             return GiftPromptResult.NotEligible;
 
         GiftAnalysisResult result = this.detector.Analyze(this.candidateFactory.CreateFromInventory(farmer.Items, npc));
-        if (!result.HasAnyGift)
+        if (!result.HasAnyGift && this.config.AutoGift)
             return GiftPromptResult.NoGifts;
 
         if (this.config.AutoGift)
@@ -65,25 +68,41 @@ public sealed class GiftPromptController
             return GiftPromptResult.AutoGifted;
         }
 
+        if (this.giftHistory.IsPromptSuppressed(npc.Name, Game1.currentSeason, Game1.dayOfMonth))
+            return GiftPromptResult.NotRemindedToday;
+
+        List<GiftMenuItem> backpackItems = this.CreateBackpackItems(farmer, npc);
+        List<GiftMenuItem> storageItems = this.config.ShowStorageItems
+            ? this.storageItemService.CreateFromStorage(farmer, npc).ToList()
+            : new List<GiftMenuItem>();
+        if (backpackItems.Count == 0 && storageItems.Count == 0)
+            return GiftPromptResult.NoGifts;
+
         string? lastGiftItemId = this.giftHistory.GetLastGift(npc.Name)?.ItemId;
-        GiftMenuModel model = GiftMenuModel.FromAnalysis(
-            result,
+        GiftMenuModel backpackModel = GiftMenuModel.FromItems(
+            backpackItems,
             lastGiftItemId,
             this.GetCategoryLabel,
             this.translate("ui.lastGifted"));
+        GiftMenuModel? storageModel = this.config.ShowStorageItems
+            ? GiftMenuModel.FromItems(storageItems, lastGiftItemId, this.GetCategoryLabel, this.translate("ui.lastGifted"))
+            : null;
 
         Game1.activeClickableMenu = new GiftSuggestionMenu(
             npc,
-            model,
-            farmer.Items,
+            backpackModel,
+            storageModel,
             selected =>
             {
-                StardewValley.Object? item = FindObjectById(farmer, selected.ItemId);
-                if (item is not null)
-                    this.giftGiver.GiveGift(npc, item, farmer, Game1.currentSeason, Game1.dayOfMonth);
+                this.giftGiver.GiveGift(npc, selected, farmer, Game1.currentSeason, Game1.dayOfMonth);
             },
+            () => this.giftHistory.SuppressPrompt(npc.Name, Game1.currentSeason, Game1.dayOfMonth),
             this.translate("ui.title"),
             this.translate("ui.close"),
+            this.translate("ui.dismissToday"),
+            this.translate("ui.backpack"),
+            this.translate("ui.storage"),
+            this.translate("ui.empty"),
             this.GetBannerText(npc));
 
         return GiftPromptResult.OpenedMenu;
@@ -108,6 +127,27 @@ public sealed class GiftPromptController
             return this.translate("birthday.banner").Replace("{{npcName}}", npc.displayName, StringComparison.Ordinal);
 
         return null;
+    }
+
+    private List<GiftMenuItem> CreateBackpackItems(Farmer farmer, NPC npc)
+    {
+        List<GiftMenuItem> items = new();
+        foreach (Item item in farmer.Items.OfType<Item>())
+        {
+            GiftCandidate? candidate = this.candidateFactory.Create(item, npc);
+            if (candidate is null)
+                continue;
+
+            items.Add(new GiftMenuItem(
+                candidate,
+                new GiftItemSource(
+                    GiftItemSourceKind.Backpack,
+                    item,
+                    () => GiftInventoryConsumption.CanConsumeFromFarmer(farmer, item),
+                    () => GiftInventoryConsumption.TryConsumeFromFarmer(farmer, item))));
+        }
+
+        return items;
     }
 
     private static StardewValley.Object? FindObjectById(Farmer farmer, string itemId)

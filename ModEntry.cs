@@ -23,11 +23,13 @@ public sealed class ModEntry : Mod
     {
         this.config = helper.ReadConfig<ModConfig>();
         GiftSelectionService selectionService = new();
+        StardewGiftCandidateFactory candidateFactory = new();
         this.promptController = new GiftPromptController(
             this.config,
             new GiftDetector(selectionService),
             selectionService,
-            new StardewGiftCandidateFactory(),
+            candidateFactory,
+            new StorageItemService(candidateFactory),
             new NpcGiftEligibility(),
             new GiftGiver(this.giftHistory),
             this.giftHistory,
@@ -58,7 +60,11 @@ public sealed class ModEntry : Mod
 
         gmcm.Register(
             this.ModManifest,
-            reset: () => this.config = new ModConfig(),
+            reset: () =>
+            {
+                this.config.AutoGift = false;
+                this.config.ShowStorageItems = false;
+            },
             save: () => this.Helper.WriteConfig(this.config));
 
         gmcm.AddBoolOption(
@@ -67,6 +73,13 @@ public sealed class ModEntry : Mod
             setValue: value => this.config.AutoGift = value,
             name: () => this.Helper.Translation.Get("gmcm.autoGift.name"),
             tooltip: () => this.Helper.Translation.Get("gmcm.autoGift.tooltip"));
+
+        gmcm.AddBoolOption(
+            this.ModManifest,
+            getValue: () => this.config.ShowStorageItems,
+            setValue: value => this.config.ShowStorageItems = value,
+            name: () => this.Helper.Translation.Get("gmcm.showStorageItems.name"),
+            tooltip: () => this.Helper.Translation.Get("gmcm.showStorageItems.tooltip"));
     }
 
     private void OnSaveLoaded(object? sender, SaveLoadedEventArgs e)

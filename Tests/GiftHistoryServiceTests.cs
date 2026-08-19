@@ -32,4 +32,39 @@ public sealed class GiftHistoryServiceTests
 
         Assert.Null(service.GetLastGift("Abigail"));
     }
+
+    [Fact]
+    public void SuppressPrompt_MatchesNpcAndDate()
+    {
+        GiftHistoryService service = new();
+
+        service.SuppressPrompt("Abigail", "spring", 1);
+
+        Assert.True(service.IsPromptSuppressed("Abigail", "spring", 1));
+        Assert.False(service.IsPromptSuppressed("Abigail", "spring", 2));
+        Assert.False(service.IsPromptSuppressed("Abigail", "summer", 1));
+        Assert.False(service.IsPromptSuppressed("Sebastian", "spring", 1));
+    }
+
+    [Fact]
+    public void SuppressPrompt_ReplacesExistingEntry()
+    {
+        GiftHistoryService service = new();
+
+        service.SuppressPrompt("Abigail", "spring", 1);
+        service.SuppressPrompt("Abigail", "spring", 2);
+
+        Assert.False(service.IsPromptSuppressed("Abigail", "spring", 1));
+        Assert.True(service.IsPromptSuppressed("Abigail", "spring", 2));
+    }
+
+    [Fact]
+    public void Import_NullSuppressionDictionaryStartsEmpty()
+    {
+        GiftHistoryService service = new();
+
+        service.Import(new GiftHistoryData { SuppressedPrompts = null! });
+
+        Assert.False(service.IsPromptSuppressed("Abigail", "spring", 1));
+    }
 }

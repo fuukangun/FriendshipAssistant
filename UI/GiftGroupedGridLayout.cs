@@ -63,7 +63,8 @@ public sealed class GiftGroupedGridLayout
                 X: column * (this.slotSize + this.slotSpacing),
                 Y: 0,
                 Size: this.slotSize,
-                row.IsLastGift));
+                row.IsLastGift,
+                row.MenuItem));
             currentSlotIndex++;
         }
 
@@ -123,14 +124,32 @@ public sealed class GiftGroupedGridLayout
         {
             foreach (GiftMenuSlot slot in row.Slots)
             {
-                bool insideX = x >= slot.X && x < slot.X + slot.Size;
-                bool insideY = y >= slot.Y && y < slot.Y + slot.Size;
-                if (insideX && insideY)
+                if (Contains(slot, x, y))
                     return slot.Candidate;
             }
         }
 
         return null;
+    }
+
+    public GiftMenuItem? HitTestMenuItem(IEnumerable<GiftGridDisplayRow> rows, int x, int y)
+    {
+        foreach (GiftGridDisplayRow row in rows)
+        {
+            foreach (GiftMenuSlot slot in row.Slots)
+            {
+                if (Contains(slot, x, y))
+                    return slot.MenuItem;
+            }
+        }
+
+        return null;
+    }
+
+    private static bool Contains(GiftMenuSlot slot, int x, int y)
+    {
+        return x >= slot.X && x < slot.X + slot.Size
+            && y >= slot.Y && y < slot.Y + slot.Size;
     }
 
     private void FlushSlots(ICollection<GiftGridDisplayRow> rows, ICollection<GiftMenuSlot> slots)

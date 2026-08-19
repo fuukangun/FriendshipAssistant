@@ -1,6 +1,10 @@
 {
   "ui.title": "Gift Suggestion",
   "ui.close": "Close",
+  "ui.dismissToday": "Don't remind me today",
+  "ui.backpack": "Backpack",
+  "ui.storage": "Storage",
+  "ui.empty": "No giftable items found.",
   "ui.lastGifted": "Last gifted",
   "category.loved": "Loved",
   "category.liked": "Liked",
@@ -15,5 +19,7 @@
   "quality.silver": "Silver",
   "quality.normal": "Normal",
   "gmcm.autoGift.name": "Auto Gift",
-  "gmcm.autoGift.tooltip": "When enabled, automatically gifts the best item after dialogue without showing the menu."
+  "gmcm.autoGift.tooltip": "When enabled, automatically gifts the best item after dialogue without showing the menu.",
+  "gmcm.showStorageItems.name": "Show Storage Items",
+  "gmcm.showStorageItems.tooltip": "When enabled, the gift suggestion menu includes supported storage devices. This may affect game balance."
 }

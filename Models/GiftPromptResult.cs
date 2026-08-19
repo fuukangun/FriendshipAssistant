@@ -7,5 +7,6 @@ public enum GiftPromptResult
     NotEligible,
     NoGifts,
     NoAutoGiftCandidate,
-    ItemNotFound
+    ItemNotFound,
+    NotRemindedToday
 }

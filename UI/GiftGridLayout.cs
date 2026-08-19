@@ -36,7 +36,7 @@ public sealed class GiftGridLayout
             int rowIndex = itemIndex / this.columns;
             int x = originX + column * (this.slotSize + this.slotSpacing);
             int y = originY + rowIndex * (this.slotSize + this.slotSpacing);
-            slots.Add(new GiftMenuSlot(row.Candidate, x, y, this.slotSize, row.IsLastGift));
+            slots.Add(new GiftMenuSlot(row.Candidate, x, y, this.slotSize, row.IsLastGift, row.MenuItem));
             itemIndex++;
         }
 

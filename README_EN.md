@@ -32,6 +32,7 @@
 | Grouped display | Groups items by Loved, Liked, Neutral, Disliked, and Hated. |
 | Inventory-style UI | Shows item icons in a grid; click an item to gift it. |
 | Auto Gift | Can automatically give the best available gift after dialogue. |
+| Storage gifts | Optionally shows items from chests, fridges, mini-fridges, and Junimo Chests, and allows gifting them directly. This may affect game balance. |
 | Birthday reminder | Shows a birthday bonus banner when the NPC has a birthday today. |
 
 ### Gift Menu
@@ -41,6 +42,7 @@
 - Slightly enlarges item icons on hover
 - Includes a visible draggable scrollbar
 - Uses a Stardew-style close button
+- Supports switching between backpack and storage items with left/right controls
 - Filters out tools, weapons, and non-giftable items
 
 ### Gift History
@@ -109,6 +111,8 @@ StardewValley/
 3. Browse items grouped by gift taste
 4. Click an item to give it
 
+When **Show Storage Items** is enabled, use the left/right controls in the suggestion menu to switch to the storage page and gift directly from supported storage devices.
+
 ### Auto Gift
 
 When Auto Gift is enabled, the mod automatically gives the best available gift after dialogue and skips the menu. A HUD message with the item icon appears in the lower-left corner.
@@ -130,6 +134,7 @@ In game menu -> **Mod Options** -> **FriendshipAssistant**
 | Setting | Default | Description |
 |---------|---------|-------------|
 | Auto Gift | Off | Automatically gives the best gift after dialogue without opening the menu. |
+| Show Storage Items | Off | Shows giftable items from supported storage devices and allows gifting them directly. This may affect game balance. |
 
 ### Edit Config File
 
@@ -137,7 +142,8 @@ Edit `Mods/FriendshipAssistant/config.json`:
 
 ```json
 {
-  "AutoGift": false
+  "AutoGift": false,
+  "ShowStorageItems": false
 }
 ```
 

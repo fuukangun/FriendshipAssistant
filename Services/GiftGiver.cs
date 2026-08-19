@@ -38,6 +38,26 @@ public sealed class GiftGiver
         return true;
     }
 
+    public bool GiveGift(NPC npc, GiftMenuItem selection, Farmer farmer, string season, int day)
+    {
+        ArgumentNullException.ThrowIfNull(npc);
+        ArgumentNullException.ThrowIfNull(selection);
+        ArgumentNullException.ThrowIfNull(farmer);
+
+        if (selection.Source.Item is not StardewValley.Object item
+            || !selection.Source.CanConsume()
+            || item.Stack <= 0)
+            return false;
+
+        if (!selection.Source.TryConsume())
+            return false;
+
+        StardewValley.Object gift = (StardewValley.Object)item.getOne();
+        npc.receiveGift(gift, farmer);
+        this.historyService.RecordGift(npc.Name, selection.Candidate, season, day);
+        return true;
+    }
+
     private static void ConsumeGiftFromInventory(Farmer farmer, StardewValley.Object item)
     {
         GiftInventoryConsumption.ConsumeResult result = GiftInventoryConsumption.ConsumeOne(item.Stack);

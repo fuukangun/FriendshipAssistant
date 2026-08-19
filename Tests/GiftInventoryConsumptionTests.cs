@@ -30,4 +30,5 @@ public sealed class GiftInventoryConsumptionTests
     {
         Assert.Throws<ArgumentOutOfRangeException>(() => GiftInventoryConsumption.ConsumeOne(stack));
     }
+
 }
