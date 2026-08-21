@@ -66,8 +66,22 @@ public sealed partial class GiftSuggestionMenu
     private void DrawDismissButton(SpriteBatch b)
     {
         Rectangle bounds = this.GetDismissButtonBounds();
-        IClickableMenu.drawTextureBox(b, Game1.menuTexture, new Rectangle(0, 256, 60, 60), bounds.X, bounds.Y, bounds.Width, bounds.Height, Color.White);
-        Utility.drawTextWithShadow(b, this.dismissTodayText, Game1.smallFont, new Vector2(bounds.X + 18, bounds.Y + 12), Game1.textColor);
+        bool hovered = bounds.Contains(Game1.getMouseX(), Game1.getMouseY());
+        IClickableMenu.drawTextureBox(
+            b,
+            Game1.menuTexture,
+            new Rectangle(0, 256, 60, 60),
+            bounds.X,
+            bounds.Y,
+            bounds.Width,
+            bounds.Height,
+            hovered ? Color.Wheat : Color.White);
+
+        Vector2 textSize = Game1.smallFont.MeasureString(this.dismissTodayText);
+        Vector2 textPosition = new(
+            bounds.X + (bounds.Width - textSize.X) / 2f,
+            bounds.Y + (bounds.Height - textSize.Y) / 2f);
+        Utility.drawTextWithShadow(b, this.dismissTodayText, Game1.smallFont, textPosition, Game1.textColor);
     }
 
     private static void DrawHeader(SpriteBatch b, GiftGridDisplayRow row)

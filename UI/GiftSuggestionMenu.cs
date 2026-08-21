@@ -26,8 +26,9 @@ public sealed partial class GiftSuggestionMenu : IClickableMenu
     private const int ScrollBarFrameInset = 4;
     private const int NavigationY = 116;
     private const int NavigationButtonSize = 40;
-    private const int DismissButtonHeight = 48;
-    private const int DismissButtonInset = 48;
+    private const int DismissButtonWidth = 220;
+    private const int DismissButtonHeight = 40;
+    private const int DismissButtonBottomInset = 34;
 
     private enum GiftPage
     {
@@ -208,11 +209,15 @@ public sealed partial class GiftSuggestionMenu : IClickableMenu
 
     private Rectangle GetDismissButtonBounds()
     {
-        return new Rectangle(
-            this.xPositionOnScreen + DismissButtonInset,
-            this.yPositionOnScreen + this.height - DismissButtonHeight - 20,
-            this.width - DismissButtonInset * 2,
-            DismissButtonHeight);
+        GiftMenuChrome.ActionButtonBounds bounds = GiftMenuChrome.GetDismissButtonBounds(
+            this.xPositionOnScreen,
+            this.yPositionOnScreen,
+            this.width,
+            this.height,
+            DismissButtonWidth,
+            DismissButtonHeight,
+            DismissButtonBottomInset);
+        return new Rectangle(bounds.X, bounds.Y, bounds.Width, bounds.Height);
     }
 
     private GiftScrollBarLayout.ScrollBarState GetScrollBarState()
