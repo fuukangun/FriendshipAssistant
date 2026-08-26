@@ -14,23 +14,25 @@ public sealed class GiftHistoryService
         return this.data.LastGifts.TryGetValue(npcName, out LastGiftEntry? entry) ? entry : null;
     }
 
-    public bool IsPromptSuppressed(string npcName, string season, int day)
+    public bool IsPromptSuppressed(string npcName, GameDate date)
     {
-        ValidateDateArguments(npcName, season, day);
+        ValidateDateArguments(npcName, date);
 
         return this.data.SuppressedPrompts.TryGetValue(npcName, out PromptSuppressionEntry? entry)
-            && string.Equals(entry.Season, season, StringComparison.Ordinal)
-            && entry.Day == day;
+            && entry.Year == date.Year
+            && string.Equals(entry.Season, date.Season, StringComparison.Ordinal)
+            && entry.Day == date.Day;
     }
 
-    public void SuppressPrompt(string npcName, string season, int day)
+    public void SuppressPrompt(string npcName, GameDate date)
     {
-        ValidateDateArguments(npcName, season, day);
+        ValidateDateArguments(npcName, date);
 
         this.data.SuppressedPrompts[npcName] = new PromptSuppressionEntry
         {
-            Season = season,
-            Day = day
+            Year = date.Year,
+            Season = date.Season,
+            Day = date.Day
         };
     }
 
@@ -64,13 +66,15 @@ public sealed class GiftHistoryService
         this.data.SuppressedPrompts ??= new Dictionary<string, PromptSuppressionEntry>();
     }
 
-    private static void ValidateDateArguments(string npcName, string season, int day)
+    private static void ValidateDateArguments(string npcName, GameDate date)
     {
         if (string.IsNullOrWhiteSpace(npcName))
             throw new ArgumentException("NPC name is required.", nameof(npcName));
-        if (string.IsNullOrWhiteSpace(season))
-            throw new ArgumentException("Season is required.", nameof(season));
-        if (day <= 0)
-            throw new ArgumentOutOfRangeException(nameof(day));
+        if (date.Year <= 0)
+            throw new ArgumentOutOfRangeException(nameof(date));
+        if (string.IsNullOrWhiteSpace(date.Season))
+            throw new ArgumentException("Season is required.", nameof(date));
+        if (date.Day <= 0)
+            throw new ArgumentOutOfRangeException(nameof(date));
     }
 }

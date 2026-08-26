@@ -34,16 +34,18 @@ public sealed class GiftHistoryServiceTests
     }
 
     [Fact]
-    public void SuppressPrompt_MatchesNpcAndDate()
+    public void SuppressPrompt_MatchesNpcAndFullDate()
     {
         GiftHistoryService service = new();
+        GameDate date = new(1, "spring", 1);
 
-        service.SuppressPrompt("Abigail", "spring", 1);
+        service.SuppressPrompt("Abigail", date);
 
-        Assert.True(service.IsPromptSuppressed("Abigail", "spring", 1));
-        Assert.False(service.IsPromptSuppressed("Abigail", "spring", 2));
-        Assert.False(service.IsPromptSuppressed("Abigail", "summer", 1));
-        Assert.False(service.IsPromptSuppressed("Sebastian", "spring", 1));
+        Assert.True(service.IsPromptSuppressed("Abigail", date));
+        Assert.False(service.IsPromptSuppressed("Abigail", new GameDate(2, "spring", 1)));
+        Assert.False(service.IsPromptSuppressed("Abigail", new GameDate(1, "spring", 2)));
+        Assert.False(service.IsPromptSuppressed("Abigail", new GameDate(1, "summer", 1)));
+        Assert.False(service.IsPromptSuppressed("Sebastian", date));
     }
 
     [Fact]
@@ -51,11 +53,11 @@ public sealed class GiftHistoryServiceTests
     {
         GiftHistoryService service = new();
 
-        service.SuppressPrompt("Abigail", "spring", 1);
-        service.SuppressPrompt("Abigail", "spring", 2);
+        service.SuppressPrompt("Abigail", new GameDate(1, "spring", 1));
+        service.SuppressPrompt("Abigail", new GameDate(1, "spring", 2));
 
-        Assert.False(service.IsPromptSuppressed("Abigail", "spring", 1));
-        Assert.True(service.IsPromptSuppressed("Abigail", "spring", 2));
+        Assert.False(service.IsPromptSuppressed("Abigail", new GameDate(1, "spring", 1)));
+        Assert.True(service.IsPromptSuppressed("Abigail", new GameDate(1, "spring", 2)));
     }
 
     [Fact]
@@ -65,6 +67,45 @@ public sealed class GiftHistoryServiceTests
 
         service.Import(new GiftHistoryData { SuppressedPrompts = null! });
 
-        Assert.False(service.IsPromptSuppressed("Abigail", "spring", 1));
+        Assert.False(service.IsPromptSuppressed("Abigail", new GameDate(1, "spring", 1)));
+    }
+
+    [Fact]
+    public void IsPromptSuppressed_LegacyEntryWithoutYearDoesNotMatch()
+    {
+        GiftHistoryService service = new();
+        service.Import(new GiftHistoryData
+        {
+            SuppressedPrompts = new Dictionary<string, PromptSuppressionEntry>
+            {
+                ["Abigail"] = new PromptSuppressionEntry { Season = "spring", Day = 1 }
+            }
+        });
+
+        Assert.False(service.IsPromptSuppressed("Abigail", new GameDate(1, "spring", 1)));
+    }
+
+    [Fact]
+    public void SuppressPrompt_ExportsCurrentYear()
+    {
+        GiftHistoryService service = new();
+
+        service.SuppressPrompt("Abigail", new GameDate(3, "spring", 1));
+
+        Assert.Equal(3, service.Export().SuppressedPrompts["Abigail"].Year);
+    }
+
+    [Fact]
+    public void SuppressionAction_ReadsDateWhenInvoked()
+    {
+        GiftHistoryService service = new();
+        GameDate currentDate = new(1, "spring", 1);
+        Action suppress = PromptSuppressionAction.Create(service, "Abigail", () => currentDate);
+        currentDate = new GameDate(1, "spring", 2);
+
+        suppress();
+
+        Assert.False(service.IsPromptSuppressed("Abigail", new GameDate(1, "spring", 1)));
+        Assert.True(service.IsPromptSuppressed("Abigail", currentDate));
     }
 }
