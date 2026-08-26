@@ -15,6 +15,7 @@
 - [How It Works](#how-it-works)
 - [Installation](#installation)
 - [Usage](#usage)
+- [Gamepad Controls](#gamepad-controls)
 - [Configuration](#configuration)
 - [Compatibility](#compatibility)
 - [Build](#build)
@@ -34,6 +35,14 @@
 | Auto Gift | Can automatically give the best available gift after dialogue. |
 | Storage gifts | Optionally shows items from chests, fridges, mini-fridges, and Junimo Chests, and allows gifting them directly. This may affect game balance. |
 | Birthday reminder | Shows a birthday bonus banner when the NPC has a birthday today. |
+
+### Gamepad Support in 1.1.0
+
+- Use the left stick and D-pad to select gifts in the gift grid
+- Move the right stick left or right to select gifts and move the mouse pointer to the selected gift center
+- Move the right stick up or down to scroll the gift grid without moving the mouse pointer
+- When the menu opens or you switch between backpack and storage, the first gift on the current page is selected and the mouse pointer is centered on it
+- Fixed focus getting stuck at the four corners of the gift grid
 
 ### Gift Menu
 
@@ -113,6 +122,21 @@ StardewValley/
 
 When **Show Storage Items** is enabled, use the left/right controls in the suggestion menu to switch to the storage page and gift directly from supported storage devices.
 
+### Gamepad Controls
+
+| Button | Action |
+|--------|--------|
+| Left stick / D-pad | Select a gift in the gift grid |
+| Right stick left/right | Select gifts horizontally and synchronize the mouse pointer |
+| Right stick up/down | Scroll the gift grid without moving the mouse pointer |
+| A | Select and give the focused gift |
+| B | Close the gift suggestion menu |
+| X | Record “do not show today” and close the menu |
+| LB / RB | Switch between backpack and storage pages |
+| LT / RT | Scroll the gift list by one visible area |
+
+Gamepad input uses the game's logical button semantics. Xbox, PlayStation, and Switch controllers use the same behavior, and the mod does not override in-game custom mappings.
+
 ### Auto Gift
 
 When Auto Gift is enabled, the mod automatically gives the best available gift after dialogue and skips the menu. A HUD message with the item icon appears in the lower-left corner.
@@ -133,7 +157,7 @@ In game menu -> **Mod Options** -> **FriendshipAssistant**
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| Auto Gift | Off | Automatically gives the best gift after dialogue without opening the menu. |
+| Auto Gift | Off | Automatically selects and gives the best gift from the player's backpack after dialogue without opening the menu. It never takes items from storage. |
 | Show Storage Items | Off | Shows giftable items from supported storage devices and allows gifting them directly. This may affect game balance. |
 
 ### Edit Config File
