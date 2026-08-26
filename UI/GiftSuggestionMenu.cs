@@ -29,6 +29,13 @@ public sealed partial class GiftSuggestionMenu : IClickableMenu
     private const int DismissButtonWidth = 220;
     private const int DismissButtonHeight = 40;
     private const int DismissButtonBottomInset = 34;
+    private const int TooltipViewportInset = 16;
+    private const int TooltipContentPadding = 32;
+    private const int TooltipMinimumWidth = 160;
+    private const int TooltipMaximumWidth = 360;
+    private const int TooltipMinimumHeight = 96;
+    private const int TooltipTextWrapWidth = 328;
+    private const float FocusedComponentScaleIncrement = 0.1f;
 
     private enum GiftPage
     {
@@ -40,7 +47,7 @@ public sealed partial class GiftSuggestionMenu : IClickableMenu
     private readonly GiftMenuModel backpackModel;
     private readonly GiftMenuModel? storageModel;
     private readonly GiftGroupedGridLayout gridLayout = new(Columns, SlotSize, SlotSpacing, HeaderHeight, RowSpacing);
-    private readonly Action<GiftMenuItem> onGiftSelected;
+    private readonly Func<GiftMenuItem, bool> onGiftSelected;
     private readonly Action onDismissToday;
     private readonly string title;
     private readonly string closeText;
@@ -57,36 +64,28 @@ public sealed partial class GiftSuggestionMenu : IClickableMenu
 
     public GiftSuggestionMenu(
         NPC npc,
-        GiftMenuModel backpackModel,
-        GiftMenuModel? storageModel,
-        Action<GiftMenuItem> onGiftSelected,
-        Action onDismissToday,
-        string title,
-        string closeText,
-        string dismissTodayText,
-        string backpackText,
-        string storageText,
-        string emptyText,
-        string? bannerText = null)
+        GiftSuggestionMenuOptions options)
         : base(
             Game1.uiViewport.Width / 2 - MenuWidth / 2,
             Game1.uiViewport.Height / 2 - MenuHeight / 2,
             MenuWidth,
             MenuHeight,
             showUpperRightCloseButton: true)
-    {
+        {
         this.npc = npc;
-        this.backpackModel = backpackModel;
-        this.storageModel = storageModel;
-        this.onGiftSelected = onGiftSelected;
-        this.onDismissToday = onDismissToday;
-        this.title = title;
-        this.closeText = closeText;
-        this.dismissTodayText = dismissTodayText;
-        this.backpackText = backpackText;
-        this.storageText = storageText;
-        this.emptyText = emptyText;
-        this.bannerText = bannerText;
+        this.backpackModel = options.Models.Backpack;
+        this.storageModel = options.Models.Storage;
+        this.onGiftSelected = options.Actions.SelectGift;
+        this.onDismissToday = options.Actions.DismissToday;
+        this.title = options.Text.Menu.Title;
+        this.closeText = options.Text.Menu.Close;
+        this.dismissTodayText = options.Text.Menu.DismissToday;
+        this.backpackText = options.Text.Pages.Backpack;
+        this.storageText = options.Text.Pages.Storage;
+        this.emptyText = options.Text.Pages.Empty;
+        this.bannerText = options.Text.Banner;
+        if (this.backpackModel.Rows.Count == 0 && this.storageModel?.Rows.Count > 0)
+            this.currentPage = GiftPage.Storage;
 
         GiftMenuChrome.CloseButtonBounds closeBounds = GiftMenuChrome.GetCloseButtonBounds(
             this.xPositionOnScreen,
@@ -95,28 +94,29 @@ public sealed partial class GiftSuggestionMenu : IClickableMenu
             CloseButtonSize,
             CloseButtonInset);
         this.upperRightCloseButton.bounds = new Rectangle(closeBounds.X, closeBounds.Y, closeBounds.Width, closeBounds.Height);
+        this.InitializeGamepadComponents();
     }
 
     public override void receiveLeftClick(int x, int y, bool playSound = true)
     {
+        this.usingGamepadFocus = false;
         base.receiveLeftClick(x, y, playSound);
 
         if (this.storageModel is not null && this.GetPreviousPageBounds().Contains(x, y))
         {
-            this.currentPage = GiftPage.Backpack;
+            this.SwitchPage(GiftPage.Backpack);
             return;
         }
 
         if (this.storageModel is not null && this.GetNextPageBounds().Contains(x, y))
         {
-            this.currentPage = GiftPage.Storage;
+            this.SwitchPage(GiftPage.Storage);
             return;
         }
 
         if (this.GetDismissButtonBounds().Contains(x, y))
         {
-            this.onDismissToday();
-            this.exitThisMenu();
+            this.DismissToday();
             return;
         }
 
@@ -141,14 +141,12 @@ public sealed partial class GiftSuggestionMenu : IClickableMenu
 
         GiftMenuItem? clicked = this.gridLayout.HitTestMenuItem(this.GetVisibleRows(), x, y);
         if (clicked is not null)
-        {
-            this.onGiftSelected(clicked);
-            this.exitThisMenu();
-        }
+            this.TrySelectGift(clicked);
     }
 
     public override void receiveScrollWheelAction(int direction)
     {
+        this.usingGamepadFocus = false;
         base.receiveScrollWheelAction(direction);
 
         ref int scrollOffset = ref this.GetCurrentScrollOffset();
@@ -157,12 +155,14 @@ public sealed partial class GiftSuggestionMenu : IClickableMenu
         else if (direction > 0)
             scrollOffset--;
 
-        int rowCount = this.gridLayout.BuildRows(this.GetCurrentModel().Rows).Count;
+        int rowCount = this.GetAllRows().Count;
         scrollOffset = Math.Clamp(scrollOffset, 0, Math.Max(0, rowCount - VisibleDisplayRows));
+        this.RebuildClickableComponents();
     }
 
     public override void leftClickHeld(int x, int y)
     {
+        this.usingGamepadFocus = false;
         base.leftClickHeld(x, y);
 
         if (this.isDraggingScrollBar)
@@ -173,6 +173,12 @@ public sealed partial class GiftSuggestionMenu : IClickableMenu
     {
         base.releaseLeftClick(x, y);
         this.isDraggingScrollBar = false;
+    }
+
+    public override void performHoverAction(int x, int y)
+    {
+        base.performHoverAction(x, y);
+        this.TrackMouseFocus(x, y);
     }
 
     private GiftMenuModel GetCurrentModel()
@@ -192,7 +198,7 @@ public sealed partial class GiftSuggestionMenu : IClickableMenu
     private IReadOnlyList<GiftGridDisplayRow> GetVisibleRows()
     {
         return this.gridLayout.PositionRows(
-            this.gridLayout.BuildVisibleRows(this.GetCurrentModel().Rows, this.GetCurrentScrollOffset(), VisibleDisplayRows),
+            this.GetAllRows().Skip(this.GetCurrentScrollOffset()).Take(VisibleDisplayRows),
             originX: this.xPositionOnScreen + 64,
             originY: this.yPositionOnScreen + ScrollBarTop);
     }
@@ -222,7 +228,7 @@ public sealed partial class GiftSuggestionMenu : IClickableMenu
 
     private GiftScrollBarLayout.ScrollBarState GetScrollBarState()
     {
-        int totalRows = this.gridLayout.BuildRows(this.GetCurrentModel().Rows).Count;
+        int totalRows = this.GetAllRows().Count;
         return GiftScrollBarLayout.Calculate(
             trackX: this.xPositionOnScreen + this.width - ScrollBarInsetRight - ScrollBarWidth,
             trackY: this.yPositionOnScreen + ScrollBarTop,
@@ -237,7 +243,7 @@ public sealed partial class GiftSuggestionMenu : IClickableMenu
     private void SetScrollOffsetFromThumbY(int thumbY)
     {
         GiftScrollBarLayout.ScrollBarState scrollBar = this.GetScrollBarState();
-        int totalRows = this.gridLayout.BuildRows(this.GetCurrentModel().Rows).Count;
+        int totalRows = this.GetAllRows().Count;
         this.GetCurrentScrollOffset() = GiftScrollBarLayout.ScrollOffsetFromThumbY(
             thumbY,
             scrollBar.TrackY,
@@ -246,6 +252,7 @@ public sealed partial class GiftSuggestionMenu : IClickableMenu
             totalRows,
             VisibleDisplayRows,
             ScrollBarFrameInset);
+        this.RebuildClickableComponents();
     }
 
 }

@@ -20,6 +20,8 @@ public sealed class LastGiftEntry
 
 public sealed class PromptSuppressionEntry
 {
+    public int Year { get; set; }
+
     public string Season { get; set; } = string.Empty;
 
     public int Day { get; set; }

@@ -19,7 +19,7 @@
   "quality.silver": "Silver",
   "quality.normal": "Normal",
   "gmcm.autoGift.name": "Auto Gift",
-  "gmcm.autoGift.tooltip": "When enabled, automatically gifts the best item after dialogue without showing the menu.",
+  "gmcm.autoGift.tooltip": "When enabled, automatically gifts the best item from your backpack after dialogue without showing the menu. It never takes items from storage.",
   "gmcm.showStorageItems.name": "Show Storage Items",
-  "gmcm.showStorageItems.tooltip": "When enabled, the gift suggestion menu includes supported storage devices. This may affect game balance."
+  "gmcm.showStorageItems.tooltip": "When enabled, the manual gift suggestion menu includes supported storage devices. This may affect game balance."
 }

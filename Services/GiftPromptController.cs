@@ -52,23 +52,31 @@ public sealed class GiftPromptController
         if (!result.HasAnyGift && this.config.AutoGift)
             return GiftPromptResult.NoGifts;
 
-        if (this.config.AutoGift)
-        {
-            GiftCandidate? selected = this.selectionService.SelectAutoGift(result);
-            if (selected is null)
-                return GiftPromptResult.NoAutoGiftCandidate;
+        return this.config.AutoGift
+            ? this.TryAutoGift(npc, farmer, result)
+            : this.TryOpenManualPrompt(npc, farmer);
+    }
 
-            StardewValley.Object? item = FindObjectById(farmer, selected.ItemId);
-            if (item is null)
-                return GiftPromptResult.ItemNotFound;
+    private GiftPromptResult TryAutoGift(NPC npc, Farmer farmer, GiftAnalysisResult result)
+    {
+        GiftCandidate? selected = this.selectionService.SelectAutoGift(result);
+        if (selected is null)
+            return GiftPromptResult.NoAutoGiftCandidate;
 
-            Item notificationItem = item.getOne();
-            this.giftGiver.GiveGift(npc, item, farmer, Game1.currentSeason, Game1.dayOfMonth);
-            this.notify(notificationItem, $"{selected.DisplayName} -> {npc.displayName}");
-            return GiftPromptResult.AutoGifted;
-        }
+        StardewValley.Object? item = FindObjectById(farmer, selected.ItemId);
+        if (item is null)
+            return GiftPromptResult.ItemNotFound;
 
-        if (this.giftHistory.IsPromptSuppressed(npc.Name, Game1.currentSeason, Game1.dayOfMonth))
+        Item notificationItem = item.getOne();
+        this.giftGiver.GiveGift(npc, item, farmer, Game1.currentSeason, Game1.dayOfMonth);
+        this.notify(notificationItem, $"{selected.DisplayName} -> {npc.displayName}");
+        return GiftPromptResult.AutoGifted;
+    }
+
+    private GiftPromptResult TryOpenManualPrompt(NPC npc, Farmer farmer)
+    {
+        GameDate today = new(Game1.year, Game1.currentSeason, Game1.dayOfMonth);
+        if (this.giftHistory.IsPromptSuppressed(npc.Name, today))
             return GiftPromptResult.NotRemindedToday;
 
         List<GiftMenuItem> backpackItems = this.CreateBackpackItems(farmer, npc);
@@ -78,7 +86,17 @@ public sealed class GiftPromptController
         if (backpackItems.Count == 0 && storageItems.Count == 0)
             return GiftPromptResult.NoGifts;
 
-        string? lastGiftItemId = this.giftHistory.GetLastGift(npc.Name)?.ItemId;
+        GiftSuggestionMenuModels models = this.CreateMenuModels(backpackItems, storageItems, npc.Name);
+        Game1.activeClickableMenu = new GiftSuggestionMenu(npc, this.CreateMenuOptions(npc, farmer, models));
+        return GiftPromptResult.OpenedMenu;
+    }
+
+    private GiftSuggestionMenuModels CreateMenuModels(
+        IReadOnlyList<GiftMenuItem> backpackItems,
+        IReadOnlyList<GiftMenuItem> storageItems,
+        string npcName)
+    {
+        string? lastGiftItemId = this.giftHistory.GetLastGift(npcName)?.ItemId;
         GiftMenuModel backpackModel = GiftMenuModel.FromItems(
             backpackItems,
             lastGiftItemId,
@@ -87,25 +105,40 @@ public sealed class GiftPromptController
         GiftMenuModel? storageModel = this.config.ShowStorageItems
             ? GiftMenuModel.FromItems(storageItems, lastGiftItemId, this.GetCategoryLabel, this.translate("ui.lastGifted"))
             : null;
+        return new GiftSuggestionMenuModels(backpackModel, storageModel);
+    }
 
-        Game1.activeClickableMenu = new GiftSuggestionMenu(
-            npc,
-            backpackModel,
-            storageModel,
-            selected =>
-            {
-                this.giftGiver.GiveGift(npc, selected, farmer, Game1.currentSeason, Game1.dayOfMonth);
-            },
-            () => this.giftHistory.SuppressPrompt(npc.Name, Game1.currentSeason, Game1.dayOfMonth),
-            this.translate("ui.title"),
-            this.translate("ui.close"),
-            this.translate("ui.dismissToday"),
-            this.translate("ui.backpack"),
-            this.translate("ui.storage"),
-            this.translate("ui.empty"),
-            this.GetBannerText(npc));
+    private GiftSuggestionMenuOptions CreateMenuOptions(
+        NPC npc,
+        Farmer farmer,
+        GiftSuggestionMenuModels models)
+    {
+        Action suppressToday = PromptSuppressionAction.Create(
+            this.giftHistory,
+            npc.Name,
+            () => new GameDate(Game1.year, Game1.currentSeason, Game1.dayOfMonth));
 
-        return GiftPromptResult.OpenedMenu;
+        GiftSuggestionMenuOptions options = new(
+            models,
+            new GiftSuggestionMenuActions(
+                selected => this.giftGiver.GiveGift(
+                    npc,
+                    selected,
+                    farmer,
+                    Game1.currentSeason,
+                    Game1.dayOfMonth),
+                suppressToday),
+            new GiftSuggestionMenuText(
+                new GiftSuggestionMenuLabels(
+                    this.translate("ui.title"),
+                    this.translate("ui.close"),
+                    this.translate("ui.dismissToday")),
+                new GiftSuggestionPageLabels(
+                    this.translate("ui.backpack"),
+                    this.translate("ui.storage"),
+                    this.translate("ui.empty")),
+                this.GetBannerText(npc)));
+        return options;
     }
 
     private string GetCategoryLabel(GiftTaste taste)
@@ -143,8 +176,10 @@ public sealed class GiftPromptController
                 new GiftItemSource(
                     GiftItemSourceKind.Backpack,
                     item,
-                    () => GiftInventoryConsumption.CanConsumeFromFarmer(farmer, item),
-                    () => GiftInventoryConsumption.TryConsumeFromFarmer(farmer, item))));
+                    new GiftSourceAccess(
+                        () => true,
+                        () => GiftInventoryConsumption.CanConsumeFromFarmer(farmer, item),
+                        () => GiftInventoryConsumption.TryConsumeFromFarmer(farmer, item)))));
         }
 
         return items;
