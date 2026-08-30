@@ -1,4 +1,5 @@
 using StardewValley;
+using StardewValley.Inventories;
 
 namespace FriendshipAssistant.Services;
 
@@ -15,7 +16,7 @@ public static class GiftInventoryConsumption
         return new ConsumeResult(newStack, newStack == 0);
     }
 
-    public static bool TryConsume(IList<Item> items, Item selected)
+    public static bool TryConsume(IInventory items, Item selected)
     {
         ArgumentNullException.ThrowIfNull(items);
         ArgumentNullException.ThrowIfNull(selected);
@@ -36,7 +37,7 @@ public static class GiftInventoryConsumption
         return false;
     }
 
-    public static bool Contains(IList<Item> items, Item selected)
+    public static bool Contains(IInventory items, Item selected)
     {
         ArgumentNullException.ThrowIfNull(items);
         ArgumentNullException.ThrowIfNull(selected);
