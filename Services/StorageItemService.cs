@@ -1,5 +1,6 @@
 using FriendshipAssistant.Models;
 using StardewValley;
+using StardewValley.Inventories;
 using StardewValley.Objects;
 
 namespace FriendshipAssistant.Services;
@@ -11,7 +12,7 @@ public sealed class StorageItemService
         ISet<object> ScannedContainers,
         NPC Npc);
 
-    private sealed record StorageContainer(IList<Item> Items, Func<bool> IsAccessible);
+    private sealed record StorageContainer(IInventory Items, Func<bool> IsAccessible);
 
     private sealed record StorageAnchor(GameLocation Location, Chest Chest)
     {
@@ -62,8 +63,12 @@ public sealed class StorageItemService
 
         if (junimoAnchors.Count > 0)
         {
-            IList<Item> junimoItems = farmer.team.GetOrCreateGlobalInventory(FarmerTeam.GlobalInventoryId_JunimoChest);
-            this.AddItems(context, new StorageContainer(junimoItems, () => junimoAnchors.Any(anchor => anchor.IsAvailable())));
+            Func<bool> isJunimoAccessible = () => junimoAnchors.Any(anchor => anchor.IsAvailable());
+            foreach (StorageAnchor anchor in junimoAnchors)
+            {
+                IInventory items = anchor.Chest.GetItemsForPlayer();
+                this.AddItems(context, new StorageContainer(items, isJunimoAccessible));
+            }
         }
         return selections;
     }
@@ -73,10 +78,7 @@ public sealed class StorageItemService
         Chest chest,
         StorageAnchor anchor)
     {
-        if (string.Equals(chest.GlobalInventoryId, FarmerTeam.GlobalInventoryId_JunimoChest, StringComparison.Ordinal))
-            return;
-
-        this.AddItems(context, new StorageContainer(chest.Items, anchor.IsAvailable));
+        this.AddItems(context, new StorageContainer(chest.GetItemsForPlayer(), anchor.IsAvailable));
     }
 
     private void AddItems(
